@@ -1,13 +1,46 @@
 import React, { useRef, useState, useEffect } from "react";
 import Moveable from "react-moveable";
+import axios from 'axios';
 
 const App = () => {
   const [moveableComponents, setMoveableComponents] = useState([]);
   const [selected, setSelected] = useState(null);
 
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [apiData, setApiData] = useState(null);
+
+  
+
+  useEffect(function () {
+    async function logJSONData() {
+      setIsLoading(true);
+
+      axios.get("https://jsonplaceholder.typicode.com/photos")
+      .then(res=>{
+          // // console.log(res.data);
+          
+          setApiData(res.data);
+          setIsLoading(false);
+      })
+      .catch(err=>{
+          // console.log(err)
+          setIsLoading(false);
+      })
+      
+      
+    }
+
+    logJSONData();
+    
+  },[]);
+  
+  // // console.log(apiData)
   const addMoveable = () => {
     // Create a new moveable component and add it to the array
     const COLORS = ["red", "blue", "yellow", "green", "purple"];
+
+    const FIT = ['contain','cover','fill','none','scale-down',]
 
     setMoveableComponents([
       ...moveableComponents,
@@ -17,12 +50,22 @@ const App = () => {
         left: 0,
         width: 100,
         height: 100,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        updateEnd: true
+        // color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        // backgroundImage: `url('${apiData[Math.floor(Math.random() * apiData.length)]?.url || null}')`,
+        objectFit: FIT[Math.floor(Math.random() * FIT.length)],
+        updateEnd: true,
+        srcData : apiData[Math.floor(Math.random() * apiData.length)]?.url || null
       },
     ]);
   };
+  // // console.log(moveableComponents.pop())
 
+  const removeMoveable = () => {
+    if(moveableComponents.length > 0){
+      moveableComponents.pop()
+    } 
+    
+  }
   const updateMoveable = (id, newComponent, updateEnd = false) => {
     const updatedMoveables = moveableComponents.map((moveable, i) => {
       if (moveable.id === id) {
@@ -34,7 +77,7 @@ const App = () => {
   };
 
   const handleResizeStart = (index, e) => {
-    console.log("e", e.direction);
+    // console.log("e", e.direction);
     // Check if the resize is coming from the left handle
     const [handlePosX, handlePosY] = e.direction;
     // 0 => center
@@ -45,7 +88,7 @@ const App = () => {
     // -1, 0
     // -1, 1
     if (handlePosX === -1) {
-      console.log("width", moveableComponents, e);
+      // console.log("width", moveableComponents, e);
       // Save the initial left and width values of the moveable component
       const initialLeft = e.left;
       const initialWidth = e.width;
@@ -56,7 +99,9 @@ const App = () => {
 
   return (
     <main style={{ height : "100vh", width: "100vw" }}>
-      <button onClick={addMoveable}>Add Moveable1</button>
+      {isLoading ? null : (<>
+        <button onClick={addMoveable}>Add Moveable1</button>
+        <button onClick={removeMoveable}>Remove Last Moveable</button>
       <div
         id="parent"
         style={{
@@ -77,6 +122,7 @@ const App = () => {
           />
         ))}
       </div>
+      </>)}
     </main>
   );
 };
@@ -91,6 +137,9 @@ const Component = ({
   height,
   index,
   color,
+  
+  objectFit,
+  srcData,
   id,
   setSelected,
   isSelected = false,
@@ -105,24 +154,28 @@ const Component = ({
     height,
     index,
     color,
+    
+    objectFit,
+    srcData,
     id,
+    updateEnd
   });
 
   let parent = document.getElementById("parent");
   let parentBounds = parent?.getBoundingClientRect();
-  
+  // console.log(parentBounds.width)
   const onResize = async (e) => {
     // ACTUALIZAR ALTO Y ANCHO
-    let newWidth = e.width;
-    let newHeight = e.height;
+     let newWidth = e.width;
+     let newHeight = e.height;
 
-    const positionMaxTop = top + newHeight;
-    const positionMaxLeft = left + newWidth;
-
-    if (positionMaxTop > parentBounds?.height)
-      newHeight = parentBounds?.height - top;
-    if (positionMaxLeft > parentBounds?.width)
-      newWidth = parentBounds?.width - left;
+    //  const positionMaxTop = top + newHeight;
+    // const positionMaxLeft = left + newWidth;
+    // // console.log(parent.getBoundingClientRect())
+    // if (positionMaxTop > parentBounds?.height)
+    //   newHeight = parentBounds?.height - top;
+    // if (positionMaxLeft > parentBounds?.width)
+    //   newWidth = parentBounds?.width - left;
 
     updateMoveable(id, {
       top,
@@ -130,6 +183,9 @@ const Component = ({
       width: newWidth,
       height: newHeight,
       color,
+      
+      objectFit,
+      srcData
     });
 
     // ACTUALIZAR NODO REFERENCIA
@@ -156,20 +212,22 @@ const Component = ({
     let newWidth = e.lastEvent?.width;
     let newHeight = e.lastEvent?.height;
 
-    const positionMaxTop = top + newHeight;
-    const positionMaxLeft = left + newWidth;
-
-    if (positionMaxTop > parentBounds?.height)
-      newHeight = parentBounds?.height - top;
-    if (positionMaxLeft > parentBounds?.width)
-      newWidth = parentBounds?.width - left;
+     const positionMaxTop = top + newHeight;
+     const positionMaxLeft = left + newWidth;
+    // // console.log(positionMaxLeft)
+    // if (positionMaxTop > parentBounds?.height)
+    //   newHeight = parentBounds?.height - top;
+    // if (positionMaxLeft > parentBounds?.width)
+    //   newWidth = parentBounds?.width - left;
+    
 
     const { lastEvent } = e;
     const { drag } = lastEvent;
     const { beforeTranslate } = drag;
 
-    const absoluteTop = top + beforeTranslate[1];
-    const absoluteLeft = left + beforeTranslate[0];
+    const absoluteTop = top //+ beforeTranslate[0];
+    const absoluteLeft = left //+ beforeTranslate[0];
+    
 
     updateMoveable(
       id,
@@ -179,6 +237,8 @@ const Component = ({
         width: newWidth,
         height: newHeight,
         color,
+        objectFit,
+        srcData
       },
       true
     );
@@ -186,7 +246,8 @@ const Component = ({
 
   return (
     <>
-      <div
+      <img
+        src={srcData}
         ref={ref}
         className="draggable"
         id={"component-" + id}
@@ -197,6 +258,7 @@ const Component = ({
           width: width,
           height: height,
           background: color,
+          objectFit: objectFit
         }}
         onClick={() => setSelected(id)}
       />
@@ -205,6 +267,12 @@ const Component = ({
         target={isSelected && ref.current}
         resizable
         draggable
+        bounds={{
+            left: 0,
+            top: 0,
+            bottom: parentBounds.bottom,
+            right: parentBounds.right
+        }}
         onDrag={(e) => {
           updateMoveable(id, {
             top: e.top,
@@ -212,17 +280,22 @@ const Component = ({
             width,
             height,
             color,
+            objectFit,
+            srcData
           });
+          
         }}
+        snappable={true}
         onResize={onResize}
         onResizeEnd={onResizeEnd}
-        keepRatio={false}
+        keepRatio={true}
         throttleResize={1}
         renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
         edge={false}
         zoom={1}
         origin={false}
         padding={{ left: 0, top: 0, right: 0, bottom: 0 }}
+        elementGuidelines={[ref.current]}
       />
     </>
   );
